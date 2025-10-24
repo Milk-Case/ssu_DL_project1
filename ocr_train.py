@@ -1,10 +1,12 @@
 import os
 import json
+import argparse
 import numpy as np
 from PIL import Image, ImageOps
 from ocr_dataset import Label
 from deep_convnet import DeepConvNet
 from pydantic import ValidationError
+
 import matplotlib.pyplot as plt
 
 class Adam:
@@ -92,53 +94,57 @@ def encode_labels(labels_train, labels_test=None):
     return train_idx, test_idx, word_to_idx, idx_to_word
 
 
-BASE_DIR = os.getcwd()
-train_dir = os.path.join(BASE_DIR, "data", "train")
-valid_dir = os.path.join(BASE_DIR, "data", "valid")
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="OCR Training Script")
+    parser.add_argument("--train", required=True, help="path to training data directory")
+    parser.add_argument("--valid", required=True, help="path to validation data directory")
+    args = parser.parse_args()
 
-X_train, Y_train_text, _ = load_dataset(train_dir)
-print(f"Train samples: {len(X_train)}")
-X_valid, Y_valid_text, _ = load_dataset(valid_dir)
-print(f"Validation samples: {len(X_valid)}")
+    train_dir = args.train
+    valid_dir = args.valid
+
+    X_train, Y_train_text, _ = load_dataset(train_dir)
+    print(f"Train samples: {len(X_train)}")
+    X_valid, Y_valid_text, _ = load_dataset(valid_dir)
+    print(f"Validation samples: {len(X_valid)}")
 
 
-Y_train, Y_test, w2i, i2w = encode_labels(Y_train_text, Y_valid_text)
+    Y_train, Y_test, w2i, i2w = encode_labels(Y_train_text, Y_valid_text)
 
-net = DeepConvNet(input_dim=(1, 32, 32), output_size=len(w2i))
+    net = DeepConvNet(input_dim=(1, 32, 32), output_size=len(w2i))
 
-epochs = 10
-batch_size = 8
-optimizer = Adam(lr = 0.001)
+    epochs = 10
+    batch_size = 8
+    optimizer = Adam(lr = 0.001)
 
-train_losses, val_accs = [], []
+    train_losses, val_accs = [], []
 
-for epoch in range(epochs):
-    idx = np.random.permutation(len(X_train))
-    X_train, Y_train = X_train[idx], Y_train[idx]
+    for epoch in range(epochs):
+        idx = np.random.permutation(len(X_train))
+        X_train, Y_train = X_train[idx], Y_train[idx]
 
-    for i in range(0, len(X_train), batch_size):
-        x_batch = X_train[i:i+batch_size]
-        t_batch = np.eye(len(w2i))[Y_train[i:i+batch_size]]
+        for i in range(0, len(X_train), batch_size):
+            x_batch = X_train[i:i+batch_size]
+            t_batch = np.eye(len(w2i))[Y_train[i:i+batch_size]]
 
-        grads = net.gradient(x_batch, t_batch)
-        optimizer.update(net.params, grads)
+            grads = net.gradient(x_batch, t_batch)
+            optimizer.update(net.params, grads)
 
-    loss = net.loss(X_train[:batch_size], np.eye(len(w2i))[Y_train[:batch_size]])
-    acc = net.accuracy(X_valid, np.eye(len(w2i))[Y_test], batch_size=len(X_valid))
-    
-    train_losses.append(loss)
-    val_accs.append(acc)
-    
-    print(f"[Epoch {epoch+1}/{epochs}] Loss={loss:.4f}, Test Acc={acc:.4f}")
+        loss = net.loss(X_train[:batch_size], np.eye(len(w2i))[Y_train[:batch_size]])
+        acc = net.accuracy(X_valid, np.eye(len(w2i))[Y_test], batch_size=len(X_valid))
+        
+        train_losses.append(loss)
+        val_accs.append(acc)
+        
+        print(f"[Epoch {epoch+1}/{epochs}] Loss={loss:.4f}, Test Acc={acc:.4f}")
 
-print("Training complete")
-net.save_params("ocr_params.pkl")
+    print("Training complete")
+    net.save_params("ocr_params.pkl")
 
-plt.plot(range(1, epochs+1), train_losses, marker='o', label='Train Loss')
-plt.plot(range(1, epochs+1), val_accs, marker='s', label='Validation Accuracy')
-plt.xlabel('Epoch')
-plt.ylabel('Value')
-plt.title('Loss & Accuracy per Epoch (Adam Optimizer)')
-plt.legend()
-plt.grid(True)
-plt.show()
+    plt.plot(range(1, epochs+1), train_losses, marker='o', label='Train Loss')
+    plt.plot(range(1, epochs+1), val_accs, marker='s', label='Validation Accuracy')
+    plt.xlabel('Epoch')
+    plt.ylabel('Value')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
