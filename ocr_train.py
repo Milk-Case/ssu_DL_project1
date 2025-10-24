@@ -93,6 +93,11 @@ def encode_labels(labels_train, labels_test=None):
 
     return train_idx, test_idx, word_to_idx, idx_to_word
 
+def to_one_hot(y, num_classes):
+    one_hot = np.zeros((len(y), num_classes), dtype=np.float32)
+    one_hot[np.arange(len(y)), y] = 1.0
+    return one_hot
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="OCR Training Script")
