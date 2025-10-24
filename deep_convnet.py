@@ -26,7 +26,7 @@ class DeepConvNet:
                  hidden_size=50, output_size=10):
         # 가중치 초기화===========
         # 각 층의 뉴런 하나당 앞 층의 몇 개 뉴런과 연결되는가（TODO: 자동 계산되게 바꿀 것）
-        pre_node_nums = np.array([1*3*3, 16*3*3, 16*3*3, 32*3*3, 32*3*3, 64*3*3, 64*4*4, hidden_size])
+        pre_node_nums = np.array([input_dim[0]*3*3, 16*3*3, 16*3*3, 32*3*3, 32*3*3, 64*3*3, 64*4*4, hidden_size])
         wight_init_scales = np.sqrt(2.0 / pre_node_nums)  # ReLU를 사용할 때의 권장 초깃값
         
         self.params = {}
@@ -83,7 +83,7 @@ class DeepConvNet:
         y = self.predict(x, train_flg=True)
         return self.last_layer.forward(y, t)
 
-    def accuracy(self, x, t, batch_size=100):
+    def accuracy(self, x, t, batch_size=64):
         if t.ndim != 1:
             t = np.argmax(t, axis=1)
 
@@ -96,7 +96,7 @@ class DeepConvNet:
             y = self.predict(tx, train_flg=False)
             y = np.argmax(y, axis=1)
 
-            # ✅ 방어 코드: 길이가 다르면 작은 쪽에 맞춤
+############################################################
             min_len = min(len(y), len(tt))
             acc += np.sum(y[:min_len] == tt[:min_len])
             total += min_len
